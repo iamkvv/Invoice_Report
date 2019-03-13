@@ -1,0 +1,31 @@
+{
+  "name": "invoicereport",
+  "version": "1.0.0",
+  "description": "Отчет  по счетам",
+  "private": true,
+  "scripts": {
+    "build": "nwb build-react-app && node node_modules/.bin/zip_dist",
+    "clean": "nwb clean-app",
+    "start": "nwb serve-react-app",
+    "test": "nwb test-react",
+    "test:coverage": "nwb test-react --coverage",
+    "test:watch": "nwb test-react --server"
+  },
+  "dependencies": {
+    "antd": "^3.14.1",
+    "axios": "^0.18.0",
+    "react": "^16.8.4",
+    "react-dom": "^16.8.4",
+    "react-iframe": "^1.5.0",
+    "react-router-dom": "^4.3.1",
+    "recharts": "^1.5.0",
+    "zip-local": "^0.3.4"
+  },
+  "devDependencies": {
+    "babel-plugin-import": "^1.11.0",
+    "nwb": "0.23.x"
+  },
+  "author": "",
+  "license": "MIT",
+  "repository": ""
+}

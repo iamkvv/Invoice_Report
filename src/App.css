@@ -1,0 +1,56 @@
+.App {
+  width: 98%;
+  margin: 0 auto;
+  /* height: 100%; */
+  height: auto;
+  min-height: 1000px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+}
+
+.App-react {
+  color: #00d8ff;
+  text-decoration: overline underline;
+}
+
+td.root-col-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #97614e;
+}
+
+th.root-col-title {
+  font-size: 1.1em !important;
+  font-weight: 600 !important;
+  color: #545c6a !important;
+}
+
+.App-logo {
+  animation: App-logo-spin infinite 20s linear;
+  height: 5vmin;
+  margin-bottom: 5px;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.repofr-header {
+  background-color: whitesmoke;
+}
+
+.repofr-title {
+  color: blue;
+  letter-spacing: 1px;
+}
+
+.ant-tabs-nav-container {
+  text-align: left;
+}
