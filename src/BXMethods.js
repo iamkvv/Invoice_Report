@@ -8,10 +8,12 @@ export const resizeWindow = (w, h) => {
 }
 
 let arr = []; // массив для возврата полученных счетов
+let companiesArr = [];
 
 export const clearArray = () => {
-    console.log('ITS OLD ARRAY!!! ', arr)
-    arr.length = 0
+    console.log('ITS OLD ARRAY!!! ', arr) //переделать!!!
+    arr.length = 0;
+    companiesArr.length = 0;
 }
 
 /**
@@ -22,13 +24,16 @@ export const clearArray = () => {
  *
  */
 
-
+/**
+ * Возвращает счета по диапазону дат
+ * @param {*} startpos 
+ * @param {*} startdate 
+ * @param {*} enddate 
+ */
 export const getAllInvoices = (startpos, startdate, enddate) => {
     let tkn = BX24.getAuth(); //вынести из функции
     let addr = 'https://its74.bitrix24.ru/rest/crm.invoice.list.json'
     let req = `${addr}?auth=${tkn.access_token}${startpos ? '&start=' + startpos : ''}&FILTER[>DATE_BILL]=${startdate}&FILTER[<DATE_BILL]=${enddate}&timestamp=${new Date().getTime()}`
-
-    console.log("REQ", req)
 
     return axios.get(req)
         .then(response => {
@@ -46,9 +51,37 @@ export const getAllInvoices = (startpos, startdate, enddate) => {
 }
 
 
+/**
+ * Возвращает все компании
+ * @param {*} token 
+ * @param {*} startpos 
+ */
+export const getAllCompanies = (token, startpos) => {
+    let addr = 'https://its74.bitrix24.ru/rest/crm.company.list.json';
+    let req = `${addr}?auth=${token}${startpos ? '&start=' + startpos : ''}&SELECT[]=ID&SELECT[]=TITLE`;
+
+    return axios.get(req)
+        .then(response => {
+            if (response.data.next) {
+                console.log("response.data??? 1", response.data.result)
+                companiesArr = companiesArr.concat(response.data.result)
+
+                return getAllCompanies(token, response.data.next)
+            } else {
+                console.log("response.data??? 2", response.data.result)
+                companiesArr = companiesArr.concat(response.data.result)
+
+                console.log("companiesArr??? ", companiesArr)
+
+                return companiesArr
+            }
+        })
+        .catch(err => {
+            console.log(err)
+        })
+}
 
 export const sendToLenta = (mess) => {
-
     let tkn = BX24.getAuth();
     console.log("token ", tkn.access_token)
     axios.post('https://its74.bitrix24.ru/rest/log.blogpost.add', {
@@ -63,8 +96,6 @@ export const sendToLenta = (mess) => {
             console.log('Correct fields ', error);
         });
 }
-
-
 
 
 ///=========================================///

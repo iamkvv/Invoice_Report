@@ -4,7 +4,7 @@ import { LocaleProvider } from 'antd';
 import ruRU from 'antd/lib/locale-provider/ru_RU';
 
 
-//import { resizeWindow } from './BXMethods'
+import { resizeWindow } from './BXMethods'
 import { getAllInvoices } from './BXMethods'
 
 
@@ -53,10 +53,10 @@ class App extends Component {
     console.log("access_token", obj.access_token);
 
 
-    // let el = document.getElementById('react-app')
-    // let w = el.scrollWidth;
-    // let h = el.scrollHeight;
-    // resizeWindow(w, h);//1500);
+    let el = document.getElementById('react-app')
+    let w = el.scrollWidth;
+    let h = el.scrollHeight;
+    resizeWindow(w, h);//1500);
 
     //Это работает --> auth взят из access_token, к-й возвращается функцией BX24.getAuth()
     // axios.get('https://fanfantulpan.bitrix24.ru/rest/user.current.json?auth=76af525c003355500003002a0000060b201c0309ddde983ed67c86b8a775d703108276')

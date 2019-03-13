@@ -9,6 +9,52 @@ export const rootTableColumns = [
     { title: 'Всего счетов', dataIndex: "invcount", key: "invcount", className: 'root-col-title' }
 ]
 
+/**
+ * Возвращает римское значение месяца
+ * @param {*} mnum 
+ */
+export const monthRome = (mnum) => {
+    switch (mnum) {
+        case 0:
+            return 'I'
+            break;
+        case 1:
+            return 'II'
+            break;
+        case 2:
+            return 'III'
+            break;
+        case 3:
+            return 'IV'
+            break;
+        case 4:
+            return 'V'
+            break;
+        case 5:
+            return 'VI'
+            break;
+        case 6:
+            return "VII"
+            break;
+        case 7:
+            return 'VIII'
+            break;
+        case 8:
+            return 'IX'
+            break;
+        case 9:
+            return 'X'
+            break;
+        case 10:
+            return 'XI'
+            break;
+        case 11:
+            return 'XII'
+            break;
+        default:
+            break;
+    }
+}
 
 
 

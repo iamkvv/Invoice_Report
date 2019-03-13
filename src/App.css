@@ -27,6 +27,10 @@ th.root-col-title {
   color: #545c6a !important;
 }
 
+.ant-tooltip-inner{
+  background-color: #1890ff;
+}
+
 .App-logo {
   animation: App-logo-spin infinite 20s linear;
   height: 5vmin;

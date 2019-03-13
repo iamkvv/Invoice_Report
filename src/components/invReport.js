@@ -1,10 +1,12 @@
 import React, { Component } from 'react'
-import { Tabs, DatePicker, BackTop, Table, Icon, Badge } from 'antd';
+import { Tabs, DatePicker, BackTop, Table, Icon, Tooltip as ATooltip, Badge } from 'antd';
 
-import { getAllInvoices } from '../BXMethods'
+import { getAllInvoices, getAllCompanies } from '../BXMethods'
 import { rootTableColumns } from '../Helper/user_columns'
 
 import { clearArray } from '../BXMethods'
+
+import { monthRome } from '../Helper/user_columns'
 
 import groupBy from 'lodash/groupBy'
 import sumBy from 'lodash/sumBy'
@@ -22,40 +24,30 @@ const { RangePicker } = DatePicker; //февраль - console.log(moment([2019,
 class InvoiceReport extends Component {
     state = {
         data: [],
+        companies: [],
         roottabledata: [],
         childtablesdata: [],
         isLoad: false
     }
     prevMonthStart = moment(moment(new Date()).subtract(1, 'month').startOf('month'), "YYYY-MM-DD");
     prevMonthEnd = moment(moment(new Date()).subtract(1, 'month').endOf('month'), "YYYY-MM-DD");
-    // columns = [{
-    //     title: 'Дата',
-    //     dataIndex: 'invdate',
-    //     key: 'invdate',
-    // },
-    // {
-    //     title: 'есть оплата',
-    //     dataIndex: 'есть',
-    // },
-    // {
-    //     title: 'нет оплаты',
-    //     dataIndex: 'нет',
-    // },
-    // {
-    //     title: 'Сумма оплаченных счетов',
-    //     dataIndex: 'sopl',
-    // },
-    // {
-    //     title: 'Сумма неоплаченных счетов',
-    //     dataIndex: 'snopl',
-    // }
-    // ]
 
     componentDidMount() {
-        this.onChange(null,
-            [this.prevMonthStart.format('YYYY-MM-DD'),
-            this.prevMonthEnd.format("YYYY-MM-DD")]
-        )
+        let tkn = BX24.getAuth();
+        getAllCompanies(tkn.access_token)
+            .then(response => {
+
+                console.log('comp response', response)
+
+                this.setState({ companies: response });
+
+                console.log('COMPANIES', this.state.companies)
+
+                this.onChange(null,
+                    [this.prevMonthStart.format('YYYY-MM-DD'),
+                    this.prevMonthEnd.format("YYYY-MM-DD")]
+                )
+            })
     }
 
 
@@ -68,8 +60,17 @@ class InvoiceReport extends Component {
         return isNaN(sum) ? 0 : sum;
     }
 
+    getCompanyTitle = (idcomp) => {
+        let t = this.state.companies.filter((cmp) => cmp.ID === idcomp)
+        if (t.length === 1) {
+            return t[0].TITLE
+        } else {
+            return ''
+        }
+    }
+
     groupInvoicesByPeriod = (data) => { //готовит данные для корневой таблицы - группировка по месяцам 
-        let rootdata = []
+        let rootdata = [];
         let groupedResults = groupBy(data, function (result) {
             return moment(result['DATE_BILL'], 'YYYY-MM-DD').startOf('month'); //ПО какой дате лучше группировать???
         });
@@ -80,8 +81,9 @@ class InvoiceReport extends Component {
             let nopl = this.sumInvoicesByStatus(groupedResults[prop], "N");
 
             rootdata.push(Object.assign({}, {
-                key: new Date(prop).getFullYear() + " " + this.monthRome(new Date(prop).getMonth()),
-                period: new Date(prop).getFullYear() + " " + this.monthRome(new Date(prop).getMonth()),
+                //rowKey: new Date(prop).getFullYear() + " " + this.monthRome(new Date(prop).getMonth()),
+                key: new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth()),
+                period: new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth()),
 
                 // "оплачено ₽": sumBy(groupedResults[prop], (obj) => {
                 //     if (obj.PAYED === "Y")
@@ -115,16 +117,31 @@ class InvoiceReport extends Component {
                 Object.assign({}, {
                     key: key,
                     ID: data[i].ID,
+                    ACCOUNT_NUMBER: data[i].ACCOUNT_NUMBER,
                     DATE_BILL: new Date(data[i].DATE_BILL).toLocaleString("ru", dataOptions),
                     PRICE: data[i].PRICE,
-                    STATUS: data[i].STATUS_ID
+                    COMPANY: this.getCompanyTitle(data[i].UF_COMPANY_ID),   // ? this.state.companies.filter((obj) => obj.ID === data[i].UF_COMPANY_ID)[0].TITLE : '???',
+                    STATUS: data[i].STATUS_ID,
+                    DATE_PAYED: data[i].DATE_PAYED ? new Date(data[i].DATE_PAYED).toLocaleString("ru", dataOptions) : '',
+                    DATE_DIFF: data[i].DATE_PAYED ? moment(data[i].DATE_PAYED).diff(moment(data[i].DATE_BILL), 'days') : ''
                 })
             )
         }
         this.setState({ childtablesdata: this.state.childtablesdata.concat(invarr) })
     }
 
-    getChildTable = () => {
+    getChildTable = (key) => {
+
+        const childData = this.state.childtablesdata.filter((obj) => (obj.key === key));
+
+        const handleChange = (pagination, filters, sorter, ...rest) => {
+            console.log('Various parameters', pagination, filters, sorter, rest);
+            // this.setState({
+            //   filteredInfo: filters,
+            //   sortedInfo: sorter,
+            // });
+        }
+
         const getStatus = (s) => {
             switch (s) {
                 case "P":
@@ -153,7 +170,16 @@ class InvoiceReport extends Component {
 
         const columns = [
             {
-                title: "ID", dataIndex: "ID", render: text => <a href={"https://its74.bitrix24.ru/crm/invoice/show/" + text + "/"} target="_blank">{text}</a>
+                title: "ID", dataIndex: "ID",
+                render: text => (
+                    <ATooltip title='Открыть в портале B24'>
+                        <a href={"https://its74.bitrix24.ru/crm/invoice/show/" + text + "/"} target="_blank">
+                            {text}</a>
+                    </ATooltip>
+                )
+            },
+            {
+                title: "№", dataIndex: "ACCOUNT_NUMBER", key: "ACCOUNT_NUMBER"
             },
             {
                 title: "Дата", dataIndex: "DATE_BILL", key: "DATE_BILL"
@@ -161,6 +187,10 @@ class InvoiceReport extends Component {
             {
                 title: "Сумма", dataIndex: "PRICE", key: "PRICE"
             },
+            {
+                title: "Компания", dataIndex: "COMPANY", key: "COMPANY"
+            },
+
             {
                 title: "Статус",
                 dataIndex: "STATUS",
@@ -174,69 +204,39 @@ class InvoiceReport extends Component {
                     value: 'P',
                 }],
                 onFilter: (value, record) => {
-                    console.log("STATUS", record, record.STATUS)
+                    //if (record.key === "2019 I") {
+                    console.log("STATUS--", record, record.key, record.STATUS, value)
                     return record.STATUS === value //.indexOf(value) === 0
+                    //}
                 },
+            },
+            {
+                title: "Дата оплаты", dataIndex: "DATE_PAYED", key: "DATE_PAYED"
+            },
+            {
+                title: "Длит-ть дн.", dataIndex: "DATE_DIFF", key: "DATE_DIFF"
             }
         ]
 
         return (
             <Table
+                rowKey={e => e.ID}
                 columns={columns}
-                dataSource={this.state.childtablesdata}
-                pagination={true} />
+                dataSource={childData} //   {this.state.childtablesdata}
+                size="small"
+                pagination={true}
+                onChange={handleChange}
+            />
         )
     }
 
-    monthRome = (mnum) => {
-        switch (mnum) {
-            case 0:
-                return 'I'
-                break;
-            case 1:
-                return 'II'
-                break;
-            case 2:
-                return 'III'
-                break;
-            case 3:
-                return 'IV'
-                break;
-            case 4:
-                return 'V'
-                break;
-            case 5:
-                return 'VI'
-                break;
-            case 6:
-                return "VII"
-                break;
-            case 7:
-                return 'VIII'
-                break;
-            case 8:
-                return 'IX'
-                break;
-            case 9:
-                return 'X'
-                break;
-            case 10:
-                return 'XI'
-                break;
-            case 11:
-                return 'XII'
-                break;
-            default:
-                break;
-        }
-    }
 
     onChange = (date, dateString) => {
 
         console.log("dateString", dateString)
 
-        clearArray()
-        this.setState({ childtablesdata: [], isLoad: true })
+        //??? clearArray() //переделать!!
+        this.setState({ roottabledata: [], childtablesdata: [], isLoad: true })
 
         getAllInvoices(null, dateString[0], dateString[1])
             .then(response => {
@@ -255,7 +255,7 @@ class InvoiceReport extends Component {
 
                 for (let prop in groupedResults) {
                     this.buildChildData(
-                        new Date(prop).getFullYear() + " " + this.monthRome(new Date(prop).getMonth()),
+                        new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth()),
                         groupedResults[prop]
                     )
                 }
@@ -268,7 +268,7 @@ class InvoiceReport extends Component {
                     console.log("obj." + new Date(prop).getFullYear() + " " + new Date(prop).getMonth(), groupedResults[prop]);
 
                     invArr.push(Object.assign({}, {
-                        period: new Date(prop).getFullYear() + " " + this.monthRome(new Date(prop).getMonth()),
+                        period: new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth()),
                         есть: filter(groupedResults[prop], { PAYED: 'Y' }).length,
                         нет: filter(groupedResults[prop], { PAYED: 'N' }).length,
 
@@ -332,9 +332,11 @@ class InvoiceReport extends Component {
                     </TabPane>
 
                     <TabPane tab="Таблица" key="2">
-                        <Table columns={rootTableColumns}
+                        <Table
+                            scroll={{ y: 540 }}
+                            columns={rootTableColumns}
                             dataSource={this.state.roottabledata}
-                            expandedRowRender={this.getChildTable}
+                            expandedRowRender={(record) => this.getChildTable(record.key)}
                         />
                     </TabPane>
                 </Tabs>
