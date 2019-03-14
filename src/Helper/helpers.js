@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import { Tooltip as ATooltip } from 'antd';
 import moment from 'moment'
+import { getCompany } from '../BXMethods'
 
 //столбцы для корневой таблицы  счетов
 export const rootTableColumns = [
@@ -11,6 +12,12 @@ export const rootTableColumns = [
     { title: 'Всего счетов', dataIndex: "invcount", key: "invcount", className: 'root-col-title' }
 ]
 
+
+const test = (p) => {
+    let o={title: "Компания", dataIndex: "COMPANY"}
+    return { p: p }
+
+}
 //столбцы для вложенных таблиц счетов
 export const invoiceTablesColumns = [
     {
@@ -32,8 +39,10 @@ export const invoiceTablesColumns = [
         title: "Сумма", dataIndex: "PRICE", key: "PRICE"
     },
     {
-        title: "Компания", dataIndex: "COMPANY", key: "COMPANY"
+        title: "Компания", dataIndex: "COMPANY",
+        render: (id) => (getCompany(id, test))
     },
+  
     {
         title: "Статус",
         dataIndex: "STATUS",

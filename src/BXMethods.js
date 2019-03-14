@@ -53,7 +53,7 @@ export const getInvoicesByPeriod = (startpos, startdate, enddate) => {
                 //return arr
                 let datas = Object.assign({}, {
                     graphicData: createGraphicData(arr),
-                    rootTableData: createRootTableData(arr)
+                    tableData: createTableData(arr)
                 })
                 //return createGraphicData(arr) //не забыть про arr!! УБРАТЬ!!
                 console.log('datas??', datas)
@@ -68,7 +68,7 @@ export const getInvoicesByPeriod = (startpos, startdate, enddate) => {
 /**
  * создает данные для родительской таблицы
  */
-const createRootTableData = (invarr) => {
+const createTableData = (invarr) => {
     let rootTableData = [];
     let nestedTablesData = [];
 
@@ -103,9 +103,8 @@ const createRootTableData = (invarr) => {
                     ACCOUNT_NUMBER: groupedInvoices[prop][i].ACCOUNT_NUMBER,
                     DATE_BILL: dateRU(groupedInvoices[prop][i].DATE_BILL),//  new Date(data[i].DATE_BILL).toLocaleString("ru", dataOptions),
                     PRICE: groupedInvoices[prop][i].PRICE,
-                    COMPANY:'???',
+                    COMPANY: groupedInvoices[prop][i].UF_COMPANY_ID,
                     // getCompany(groupedInvoices[prop][i].UF_COMPANY_ID).then(val => {COMPANY: val}),
-                    //  this.getCompanyTitle(groupedInvoices[prop][i].UF_COMPANY_ID),   // ? this.state.companies.filter((obj) => obj.ID === data[i].UF_COMPANY_ID)[0].TITLE : '???',
                     STATUS: groupedInvoices[prop][i].STATUS_ID,
                     DATE_PAYED: dateRU(groupedInvoices[prop][i].DATE_PAYED), // data[i].DATE_PAYED ? new Date(data[i].DATE_PAYED).toLocaleString("ru", dataOptions) : '',
                     DATE_DIFF: dateDiff(groupedInvoices[prop][i].DATE_BILL, groupedInvoices[prop][i].DATE_PAYED) //     data[i].DATE_PAYED ? moment(data[i].DATE_PAYED).diff(moment(data[i].DATE_BILL), 'days') : ''
@@ -116,53 +115,30 @@ const createRootTableData = (invarr) => {
 
     console.log('nestedData', nestedTablesData)
 
-    return rootTableData
+    return ({ roottabledata: rootTableData, nestedtablesdata: nestedTablesData })
 }
-
-const getCompany = (id) => {
+const test1 = (t) => { console.log("FFF", t); return t }
+async function getCompany(id, f) {
     let tkn = BX24.getAuth();
     let addr = 'https://its74.bitrix24.ru/rest/crm.company.get.json';
     let req = `${addr}?auth=${tkn.access_token}&id=${id}`;
+    let r = await axios.get(req)
 
-    return axios.get(req)
-        .then(response => {
-            console.log("Comp", response.data.result.TITLE)
-            //return 'response.result - ' + id
-            return response.data.result.TITLE
-        }
-        )
-        .catch(err => {
-            console.log("COMPANY-ERR", err)
-        })
+    return await f(r.data.result.TITLE)
+    // return axios.get(req)
+    //     .then(response => {
+    //         console.log("Comp", response.data.result.TITLE)
+    //         //return 'response.result - ' + id
+    //         return response.data.result.TITLE;
+
+    //     }
+    //     )
+    //     .catch(err => {
+    //         console.log("COMPANY-ERR", err)
+    //     })
 }
 
-
-/**
- * создает данные для вложенных таблиц
- */
-// const createNestedTablesData = (invarr) => {
-//     let invs = [];
-
-//     for (let i = 0; i < invarr.length; i++) {
-//         let key_period = new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth());
-//         invarr.push(
-//             Object.assign({}, {
-//                 key: key,
-//                 ID: data[i].ID,
-//                 ACCOUNT_NUMBER: data[i].ACCOUNT_NUMBER,
-//                 DATE_BILL: dateRU(data[i].DATE_BILL),//  new Date(data[i].DATE_BILL).toLocaleString("ru", dataOptions),
-//                 PRICE: data[i].PRICE,
-//                 COMPANY: this.getCompanyTitle(data[i].UF_COMPANY_ID),   // ? this.state.companies.filter((obj) => obj.ID === data[i].UF_COMPANY_ID)[0].TITLE : '???',
-//                 STATUS: data[i].STATUS_ID,
-//                 DATE_PAYED: dateRU(data[i].DATE_PAYED), // data[i].DATE_PAYED ? new Date(data[i].DATE_PAYED).toLocaleString("ru", dataOptions) : '',
-//                 DATE_DIFF: dateDiff(data[i].DATE_BILL, data[i].DATE_PAYED) //     data[i].DATE_PAYED ? moment(data[i].DATE_PAYED).diff(moment(data[i].DATE_BILL), 'days') : ''
-//             })
-//         )
-//     }
-//     return invs;
-
-// }
-
+export { getCompany }
 
 const getCompanyTitle = (idcomp) => {
     // let t = this.state.companies.filter((cmp) => cmp.ID === idcomp)

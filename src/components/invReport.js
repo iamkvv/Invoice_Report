@@ -23,7 +23,7 @@ class InvoiceReport extends Component {
         graphicData: [], //для графика - дать хорошее имя
         companies: [],
         roottabledata: [],
-        childtablesdata: [],
+        nestedtablesdata: [],
         isLoad: false
     }
     prevMonthStart = moment(moment(new Date()).subtract(1, 'month').startOf('month'), "YYYY-MM-DD");
@@ -120,11 +120,7 @@ class InvoiceReport extends Component {
 
     detailInvoiceTable = (key) => {
 
-        const childData = this.state.childtablesdata.filter((obj) => (obj.key === key));
-
-        const handleChange = (pagination, filters, sorter, ...rest) => { //убрать
-            console.log('Various parameters', pagination, filters, sorter, rest);
-        }
+        const childData = this.state.nestedtablesdata.filter((obj) => (obj.key === key));
 
         return (
             <Table
@@ -133,7 +129,6 @@ class InvoiceReport extends Component {
                 dataSource={childData} //   {this.state.childtablesdata}
                 size="small"
                 pagination={true}
-                onChange={handleChange}
             />
         )
     }
@@ -147,7 +142,7 @@ class InvoiceReport extends Component {
         getInvoicesByPeriod(null, dateString[0], dateString[1])
             .then(response => {
                 //тут нужно возвращать 2 набора в одном объекте  1 - для графика и 1 - для таблицы
-                console.log("Invoices for graph ", response)
+                console.log("all datas ", response)
 
 
                 ///!!!!
@@ -170,11 +165,10 @@ class InvoiceReport extends Component {
 
                 ///!!!!!
 
-                console.log("!!!!---", response)
-
                 this.setState({
                     graphicData: response.graphicData,
-                    roottabledata: response.rootTableData,
+                    roottabledata: response.tableData.roottabledata,
+                    nestedtablesdata: response.tableData.nestedtablesdata,
                     isLoad: false
                 })//   ({ graphicData: invArr, isLoad: false });
             })
@@ -227,7 +221,7 @@ class InvoiceReport extends Component {
                             scroll={{ y: 540 }}
                             columns={rootTableColumns}
                             dataSource={this.state.roottabledata}
-                        ///tmp!! expandedRowRender={(record) => this.detailInvoiceTable(record.key)}
+                            expandedRowRender={(record) => this.detailInvoiceTable(record.key)}
                         />
                     </TabPane>
                 </Tabs>
