@@ -11,7 +11,7 @@ module.exports = {
   webpack: {
     publicPath: '',
     extra: {
-      devtool: 'eval'
+      devtool: false
     }
   }
 }

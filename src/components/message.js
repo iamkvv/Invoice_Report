@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import { Card, Button } from 'antd';
-import { sendMessage } from '../BXMethods'
 import { sendToLenta } from '../BXMethods'
 
 import { getRate } from '../outMehods'
@@ -36,10 +35,6 @@ class CurrMessage extends Component {
     }
 
     afterMessage(res) {   ///, ctx) {
-        //callBack BX-метода; this привязан в конструкторе
-
-        console.log('afterMessage - this', this)
-        //console.log('afterMessage - ctx', ctx)
 
         if (!res.error()) {
             //ctx.setResult();

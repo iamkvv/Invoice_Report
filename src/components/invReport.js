@@ -1,29 +1,26 @@
 import React, { Component } from 'react'
-import { Tabs, DatePicker, BackTop, Table, Icon, Tooltip as ATooltip, Badge } from 'antd';
+import { Tabs, DatePicker, BackTop, Table, Icon } from 'antd';
 
-import { getAllInvoices, getAllCompanies } from '../BXMethods'
-import { rootTableColumns } from '../Helper/user_columns'
+import { getInvoicesByPeriod, getAllCompanies } from '../BXMethods'
+import { monthRome, rootTableColumns, dateDiff, dateRU, invoiceTablesColumns } from '../Helper/helpers'
 
-import { clearArray } from '../BXMethods'
-
-import { monthRome } from '../Helper/user_columns'
+import { clearArray } from '../BXMethods' //?? этого не д.б.
 
 import groupBy from 'lodash/groupBy'
 import sumBy from 'lodash/sumBy'
 import filter from 'lodash/filter'
 import moment from 'moment'
 
-import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-import { resizeWindow } from '../BXMethods'
-
+import { resizeWindow } from '../BXMethods' //доделать!!!!
 
 const TabPane = Tabs.TabPane
 const { RangePicker } = DatePicker; //февраль - console.log(moment([2019, 1]).toDate(),"---" ,moment([2019, 1]).endOf('month').toDate())
 
 class InvoiceReport extends Component {
     state = {
-        data: [],
+        graphicData: [], //для графика - дать хорошее имя
         companies: [],
         roottabledata: [],
         childtablesdata: [],
@@ -36,12 +33,7 @@ class InvoiceReport extends Component {
         let tkn = BX24.getAuth();
         getAllCompanies(tkn.access_token)
             .then(response => {
-
-                console.log('comp response', response)
-
                 this.setState({ companies: response });
-
-                console.log('COMPANIES', this.state.companies)
 
                 this.onChange(null,
                     [this.prevMonthStart.format('YYYY-MM-DD'),
@@ -51,21 +43,21 @@ class InvoiceReport extends Component {
     }
 
 
-    sumInvoicesByStatus = (data, status) => {
-        let sum = 0
-        sum = sumBy(data, (obj) => {
-            if (obj.PAYED === status)
-                return parseFloat(obj.PRICE)
-        })
-        return isNaN(sum) ? 0 : sum;
-    }
+    // sumInvoicesByStatus = (data, status) => {
+    //     let sum = 0
+    //     sum = sumBy(data, (obj) => {
+    //         if (obj.PAYED === status)
+    //             return parseFloat(obj.PRICE)
+    //     })
+    //     return isNaN(sum) ? 0 : sum;
+    // }
 
     getCompanyTitle = (idcomp) => {
         let t = this.state.companies.filter((cmp) => cmp.ID === idcomp)
         if (t.length === 1) {
             return t[0].TITLE
         } else {
-            return ''
+            return
         }
     }
 
@@ -107,121 +99,37 @@ class InvoiceReport extends Component {
 
     buildChildData = (key, data) => {
         let invarr = [];
-        const dataOptions = {
-            year: 'numeric',
-            month: '2-digit',
-            day: 'numeric',
-        }
+
         for (let i = 0; i < data.length; i++) {
             invarr.push(
                 Object.assign({}, {
                     key: key,
                     ID: data[i].ID,
                     ACCOUNT_NUMBER: data[i].ACCOUNT_NUMBER,
-                    DATE_BILL: new Date(data[i].DATE_BILL).toLocaleString("ru", dataOptions),
+                    DATE_BILL: dateRU(data[i].DATE_BILL),//  new Date(data[i].DATE_BILL).toLocaleString("ru", dataOptions),
                     PRICE: data[i].PRICE,
                     COMPANY: this.getCompanyTitle(data[i].UF_COMPANY_ID),   // ? this.state.companies.filter((obj) => obj.ID === data[i].UF_COMPANY_ID)[0].TITLE : '???',
                     STATUS: data[i].STATUS_ID,
-                    DATE_PAYED: data[i].DATE_PAYED ? new Date(data[i].DATE_PAYED).toLocaleString("ru", dataOptions) : '',
-                    DATE_DIFF: data[i].DATE_PAYED ? moment(data[i].DATE_PAYED).diff(moment(data[i].DATE_BILL), 'days') : ''
+                    DATE_PAYED: dateRU(data[i].DATE_PAYED), // data[i].DATE_PAYED ? new Date(data[i].DATE_PAYED).toLocaleString("ru", dataOptions) : '',
+                    DATE_DIFF: dateDiff(data[i].DATE_BILL, data[i].DATE_PAYED) //     data[i].DATE_PAYED ? moment(data[i].DATE_PAYED).diff(moment(data[i].DATE_BILL), 'days') : ''
                 })
             )
         }
         this.setState({ childtablesdata: this.state.childtablesdata.concat(invarr) })
     }
 
-    getChildTable = (key) => {
+    detailInvoiceTable = (key) => {
 
         const childData = this.state.childtablesdata.filter((obj) => (obj.key === key));
 
-        const handleChange = (pagination, filters, sorter, ...rest) => {
+        const handleChange = (pagination, filters, sorter, ...rest) => { //убрать
             console.log('Various parameters', pagination, filters, sorter, rest);
-            // this.setState({
-            //   filteredInfo: filters,
-            //   sortedInfo: sorter,
-            // });
         }
-
-        const getStatus = (s) => {
-            switch (s) {
-                case "P":
-                    return "опл"//(<Badge status="success" text="опл" />)
-                    break;
-                case "A":
-                    return "подтв" //(<Badge status="processing" text="подтв" />)
-                    break;
-                case "D":
-                    return "откл"// (<Badge status="warning" text="откл" />)
-                    break;
-                case "Q":
-                    return "част"//(<Badge status="default" text="част" />)
-                    break;
-                case "N":
-                    return "черн" //(<Badge status="error" text="черн" />)
-                    break;
-                case "S":
-                    return "отпр"// (<Badge status="processing" text="отпр" />)
-                    break;
-
-                default:
-                    return s
-            }
-        }
-
-        const columns = [
-            {
-                title: "ID", dataIndex: "ID",
-                render: text => (
-                    <ATooltip title='Открыть в портале B24'>
-                        <a href={"https://its74.bitrix24.ru/crm/invoice/show/" + text + "/"} target="_blank">
-                            {text}</a>
-                    </ATooltip>
-                )
-            },
-            {
-                title: "№", dataIndex: "ACCOUNT_NUMBER", key: "ACCOUNT_NUMBER"
-            },
-            {
-                title: "Дата", dataIndex: "DATE_BILL", key: "DATE_BILL"
-            },
-            {
-                title: "Сумма", dataIndex: "PRICE", key: "PRICE"
-            },
-            {
-                title: "Компания", dataIndex: "COMPANY", key: "COMPANY"
-            },
-
-            {
-                title: "Статус",
-                dataIndex: "STATUS",
-                key: "STATUS",
-                render: (s) => { return getStatus(s) },
-                filters: [{
-                    text: 'отклонен',
-                    value: 'D',
-                }, {
-                    text: 'оплачен',
-                    value: 'P',
-                }],
-                onFilter: (value, record) => {
-                    //if (record.key === "2019 I") {
-                    console.log("STATUS--", record, record.key, record.STATUS, value)
-                    return record.STATUS === value //.indexOf(value) === 0
-                    //}
-                },
-            },
-            {
-                title: "Дата оплаты", dataIndex: "DATE_PAYED", key: "DATE_PAYED"
-            },
-            {
-                title: "Длит-ть дн.", dataIndex: "DATE_DIFF", key: "DATE_DIFF"
-            }
-        ]
 
         return (
             <Table
-                rowKey={e => e.ID}
-                columns={columns}
+                rowKey={e => e.ID} //???убрать
+                columns={invoiceTablesColumns}
                 dataSource={childData} //   {this.state.childtablesdata}
                 size="small"
                 pagination={true}
@@ -233,59 +141,42 @@ class InvoiceReport extends Component {
 
     onChange = (date, dateString) => {
 
-        console.log("dateString", dateString)
-
         //??? clearArray() //переделать!!
         this.setState({ roottabledata: [], childtablesdata: [], isLoad: true })
 
-        getAllInvoices(null, dateString[0], dateString[1])
+        getInvoicesByPeriod(null, dateString[0], dateString[1])
             .then(response => {
-                console.log("Invoices ", response)
-
-                let invArr = [];
-
-                var groupedResults = groupBy(response, function (result) {
-                    return moment(result['DATE_BILL'], 'YYYY-MM-DD').startOf('month'); //ПО какой дате лучше группировать???
-                });
-
-                //для таблицы
-                let RootTableInvoicesData = this.groupInvoicesByPeriod(response)
-                this.setState({ roottabledata: RootTableInvoicesData })
-                console.log('Группировка по месяцам', groupedResults)//Группировка по месяцам
-
-                for (let prop in groupedResults) {
-                    this.buildChildData(
-                        new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth()),
-                        groupedResults[prop]
-                    )
-                }
-
-                console.log("childtablesdata ??? ", this.state.childtablesdata)
-                console.log("roottablesdata ??? ", this.state.roottabledata)
+                //тут нужно возвращать 2 набора в одном объекте  1 - для графика и 1 - для таблицы
+                console.log("Invoices for graph ", response)
 
 
-                for (let prop in groupedResults) {
-                    console.log("obj." + new Date(prop).getFullYear() + " " + new Date(prop).getMonth(), groupedResults[prop]);
+                ///!!!!
+                // let invArr = [];
+                // var groupedResults = groupBy(response, function (result) {
+                //     return moment(result['DATE_BILL'], 'YYYY-MM-DD').startOf('month'); //ПО какой дате лучше группировать???
+                // });
 
-                    invArr.push(Object.assign({}, {
-                        period: new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth()),
-                        есть: filter(groupedResults[prop], { PAYED: 'Y' }).length,
-                        нет: filter(groupedResults[prop], { PAYED: 'N' }).length,
+                // //для таблицы
+                // let RootTableInvoicesData = this.groupInvoicesByPeriod(response)
+                // this.setState({ roottabledata: RootTableInvoicesData })
+                // console.log('Группировка по месяцам', groupedResults)//Группировка по месяцам
 
-                        "оплачено ₽": sumBy(groupedResults[prop], (obj) => {
-                            if (obj.PAYED === "Y")
-                                return parseFloat(obj.PRICE)
-                        }),
+                // for (let prop in groupedResults) {
+                //     this.buildChildData(
+                //         new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth()),
+                //         groupedResults[prop]
+                //     )
+                // }
 
-                        "не оплачено ₽": sumBy(groupedResults[prop], (obj) => {
-                            if (obj.PAYED === "N")
-                                return parseFloat(obj.PRICE)
-                        })
-                    }))
-                }
+                ///!!!!!
 
-                console.log('ARRAY ', invArr)
-                this.setState({ data: invArr, isLoad: false });
+                console.log("!!!!---", response)
+
+                this.setState({
+                    graphicData: response.graphicData,
+                    roottabledata: response.rootTableData,
+                    isLoad: false
+                })//   ({ graphicData: invArr, isLoad: false });
             })
     }
 
@@ -319,7 +210,7 @@ class InvoiceReport extends Component {
                             Оплата счетов
                         </div>
 
-                        <BarChart width={700} height={400} data={this.state.data}
+                        <BarChart width={700} height={400} data={this.state.graphicData}
                             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="period" />
@@ -336,7 +227,7 @@ class InvoiceReport extends Component {
                             scroll={{ y: 540 }}
                             columns={rootTableColumns}
                             dataSource={this.state.roottabledata}
-                            expandedRowRender={(record) => this.getChildTable(record.key)}
+                        ///tmp!! expandedRowRender={(record) => this.detailInvoiceTable(record.key)}
                         />
                     </TabPane>
                 </Tabs>
