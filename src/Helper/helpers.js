@@ -13,11 +13,7 @@ export const rootTableColumns = [
 ]
 
 
-const test = (p) => {
-    let o={title: "Компания", dataIndex: "COMPANY"}
-    return { p: p }
-
-}
+let test = {}
 //столбцы для вложенных таблиц счетов
 export const invoiceTablesColumns = [
     {
@@ -40,9 +36,9 @@ export const invoiceTablesColumns = [
     },
     {
         title: "Компания", dataIndex: "COMPANY",
-        render: (id) => (getCompany(id, test))
+        render: (id) => { getCompany(id, test); return test[id] }
     },
-  
+
     {
         title: "Статус",
         dataIndex: "STATUS",

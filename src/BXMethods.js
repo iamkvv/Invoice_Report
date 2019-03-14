@@ -117,28 +117,30 @@ const createTableData = (invarr) => {
 
     return ({ roottabledata: rootTableData, nestedtablesdata: nestedTablesData })
 }
-const test1 = (t) => { console.log("FFF", t); return t }
-async function getCompany(id, f) {
+//const test1 = (t) => { console.log("FFF", t); return t }
+
+//async function getCompany(id, t) {
+export const getCompany = (id, t) => {
     let tkn = BX24.getAuth();
     let addr = 'https://its74.bitrix24.ru/rest/crm.company.get.json';
     let req = `${addr}?auth=${tkn.access_token}&id=${id}`;
-    let r = await axios.get(req)
+    //let r = await axios.get(req)
+    // t[id] = await r.data.result.TITLE
+    // return await f(r.data.result.TITLE)
+    return axios.get(req)
+        .then(response => {
+            console.log("Comp", response.data.result.TITLE)
+            //return 'response.result - ' + id
+            t[id] =  response.data.result.TITLE
+            //return response.data.result.TITLE;
 
-    return await f(r.data.result.TITLE)
-    // return axios.get(req)
-    //     .then(response => {
-    //         console.log("Comp", response.data.result.TITLE)
-    //         //return 'response.result - ' + id
-    //         return response.data.result.TITLE;
-
-    //     }
-    //     )
-    //     .catch(err => {
-    //         console.log("COMPANY-ERR", err)
-    //     })
+        }
+        ).catch(err => {
+            console.log("COMPANY-ERR", err)
+        })
 }
 
-export { getCompany }
+//export { getCompany }
 
 const getCompanyTitle = (idcomp) => {
     // let t = this.state.companies.filter((cmp) => cmp.ID === idcomp)
