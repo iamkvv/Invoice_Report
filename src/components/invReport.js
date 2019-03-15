@@ -1,8 +1,9 @@
 import React, { Component } from 'react'
-import { Tabs, DatePicker, BackTop, Table, Icon } from 'antd';
+import { Tabs, DatePicker, BackTop, Table, Icon, Tooltip as ATooltip } from 'antd';
+import axios from 'axios';
 
 import { getInvoicesByPeriod, getAllCompanies } from '../BXMethods'
-import { monthRome, rootTableColumns, dateDiff, dateRU, invoiceTablesColumns } from '../Helper/helpers'
+import { monthRome, rootTableColumns, dateDiff, dateRU, invoiceStatus } from '../Helper/helpers'
 
 import { clearArray } from '../BXMethods' //?? этого не д.б.
 
@@ -20,6 +21,7 @@ const { RangePicker } = DatePicker; //февраль - console.log(moment([2019,
 
 class InvoiceReport extends Component {
     state = {
+        companyname: {},
         graphicData: [], //для графика - дать хорошее имя
         companies: [],
         roottabledata: [],
@@ -29,18 +31,126 @@ class InvoiceReport extends Component {
     prevMonthStart = moment(moment(new Date()).subtract(1, 'month').startOf('month'), "YYYY-MM-DD");
     prevMonthEnd = moment(moment(new Date()).subtract(1, 'month').endOf('month'), "YYYY-MM-DD");
 
-    componentDidMount() {
-        let tkn = BX24.getAuth();
-        getAllCompanies(tkn.access_token)
-            .then(response => {
-                this.setState({ companies: response });
+    compName = {};
 
-                this.onChange(null,
-                    [this.prevMonthStart.format('YYYY-MM-DD'),
-                    this.prevMonthEnd.format("YYYY-MM-DD")]
-                )
+    shouldComponentUpdate(nextProps, nextState) {
+        console.log("should ", nextProps, nextState)
+        return true
+    }
+
+
+    componentDidMount() {
+        // let tkn = BX24.getAuth();
+        // getAllCompanies(tkn.access_token)
+        //    .then(response => {
+        //       this.setState({ companies: response });
+
+        this.onChange(null,
+            [this.prevMonthStart.format('YYYY-MM-DD'),
+            this.prevMonthEnd.format("YYYY-MM-DD")]
+        )
+        // })
+    }
+
+    //---------------------------------------
+
+    onExpandedRowsChange = (rows) => {
+        console.log("onExpandedRowsChange?", rows)
+    }
+
+    test = () => {
+        return this.compName[id]
+    }
+    invoiceTablesColumns = [
+        {
+            title: "ID", dataIndex: "ID",
+            render: text => (
+                <ATooltip title='Открыть в портале B24'>
+                    <a href={"https://its74.bitrix24.ru/crm/invoice/show/" + text + "/"} target="_blank">
+                        {text}</a>
+                </ATooltip>
+            )
+        },
+        {
+            title: "№", dataIndex: "ACCOUNT_NUMBER", key: "ACCOUNT_NUMBER"
+        },
+        {
+            title: "Дата", dataIndex: "DATE_BILL", key: "DATE_BILL"
+        },
+        {
+            title: "Сумма", dataIndex: "PRICE", key: "PRICE"
+        },
+        {
+            title: "Компания", dataIndex: "COMPANY",
+            render: (id, ...rest) => {
+                console.log('rest!!!', rest);
+                this.getCompany(id, rest[0]);
+                // return this.compName[id]
+                ///this.state.companyname[id]
+            }
+        },
+        {
+            title: "Название", dataIndex: "COMPANY_NAME", key: "COMPANY_NAME"
+        },
+        {
+            title: "Статус",
+            dataIndex: "STATUS",
+            key: "STATUS",
+            render: (s) => (invoiceStatus(s)),
+            filters: [{
+                text: 'отклонен',
+                value: 'D',
+            }, {
+                text: 'оплачен',
+                value: 'P',
+            }],
+            onFilter: (value, record) => {
+                return record.STATUS === value
+            },
+        },
+        {
+            title: "Дата оплаты", dataIndex: "DATE_PAYED", key: "DATE_PAYED"
+        },
+        {
+            title: "Длит-ть дн.", dataIndex: "DATE_DIFF", key: "DATE_DIFF"
+        }
+    ]
+
+    getCompany = (id, rec) => {
+        let tkn = BX24.getAuth();
+        let addr = 'https://its74.bitrix24.ru/rest/crm.company.get.json';
+        let req = `${addr}?auth=${tkn.access_token}&id=${id}`;
+        //let r = await axios.get(req)
+        // t[id] = await r.data.result.TITLE
+        // return await f(r.data.result.TITLE)
+
+        axios.get(req)
+            .then(response => {
+                console.log("from getCompany", response.data.result.TITLE)
+                console.log("rec", rec)
+                console.log("getCompany nestedtablesdata", this.state.nestedtablesdata)
+                rec['COMPANY_NAME'] = response.data.result.TITLE
+                this.forceUpdate();
+                //return 'response.result - ' + id
+                //t[id] =  response.data.result.TITLE
+                //return response.data.result.TITLE;
+
+                //this.compName[id] = response.data.result.TITLE;
+                //rec.ID = response.data.result.TITLE
+
+                //let obj = { [id]: response.data.result.TITLE }
+                //this.setState({ companyname: Object.assign(this.state.companyname, obj) })
+            }
+            ).catch(err => {
+                console.log("COMPANY-ERR", err)
             })
     }
+
+
+
+
+
+    //---------------------------------------
 
 
     // sumInvoicesByStatus = (data, status) => {
@@ -120,15 +230,20 @@ class InvoiceReport extends Component {
 
     detailInvoiceTable = (key) => {
 
+        const onNestedChange = (f, s, e) => {
+            console.log('onNestedChange', f, s, e)
+        }
+
         const childData = this.state.nestedtablesdata.filter((obj) => (obj.key === key));
 
         return (
             <Table
-                rowKey={e => e.ID} //???убрать
-                columns={invoiceTablesColumns}
-                dataSource={childData} //   {this.state.childtablesdata}
+                //rowKey={e => e.ID} //???убрать
+                columns={this.invoiceTablesColumns}
+                dataSource={childData}
                 size="small"
                 pagination={true}
+                onChange={onNestedChange}
             />
         )
     }
@@ -222,6 +337,7 @@ class InvoiceReport extends Component {
                             columns={rootTableColumns}
                             dataSource={this.state.roottabledata}
                             expandedRowRender={(record) => this.detailInvoiceTable(record.key)}
+                            onExpandedRowsChange={this.onExpandedRowsChange}
                         />
                     </TabPane>
                 </Tabs>

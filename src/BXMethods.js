@@ -50,6 +50,11 @@ export const getInvoicesByPeriod = (startpos, startdate, enddate) => {
                 return getInvoicesByPeriod(response.data.next, startdate, enddate)
             } else {
                 arr = arr.concat(response.data.result)
+
+                // setTimeout(() => { //ставим имена фирм
+                //     CompName(0, arr)
+                // }, 0);
+
                 //return arr
                 let datas = Object.assign({}, {
                     graphicData: createGraphicData(arr),
@@ -64,6 +69,24 @@ export const getInvoicesByPeriod = (startpos, startdate, enddate) => {
             console.log(err)
         })
 }
+
+
+function CompName(idx, arr) {
+    let cnt = 0;
+    for (var i = idx; cnt < 90; i++) {
+        cnt++;
+        if (i == arr.length) return
+        console.log('from COMP_NAME', arr[i]['COMPANY'])
+        getCompany(arr[i]['COMPANY'], arr[i])
+    }
+
+    setTimeout(() => {
+        console.log('-----------')
+        CompName(i, arr)
+    }, 3000);
+}
+
+
 
 /**
  * создает данные для родительской таблицы
@@ -104,7 +127,7 @@ const createTableData = (invarr) => {
                     DATE_BILL: dateRU(groupedInvoices[prop][i].DATE_BILL),//  new Date(data[i].DATE_BILL).toLocaleString("ru", dataOptions),
                     PRICE: groupedInvoices[prop][i].PRICE,
                     COMPANY: groupedInvoices[prop][i].UF_COMPANY_ID,
-                    // getCompany(groupedInvoices[prop][i].UF_COMPANY_ID).then(val => {COMPANY: val}),
+                    COMPANY_NAME: "",
                     STATUS: groupedInvoices[prop][i].STATUS_ID,
                     DATE_PAYED: dateRU(groupedInvoices[prop][i].DATE_PAYED), // data[i].DATE_PAYED ? new Date(data[i].DATE_PAYED).toLocaleString("ru", dataOptions) : '',
                     DATE_DIFF: dateDiff(groupedInvoices[prop][i].DATE_BILL, groupedInvoices[prop][i].DATE_PAYED) //     data[i].DATE_PAYED ? moment(data[i].DATE_PAYED).diff(moment(data[i].DATE_BILL), 'days') : ''
@@ -113,6 +136,9 @@ const createTableData = (invarr) => {
         }
     }
 
+
+
+    //CompName(0, nestedTablesData)
     console.log('nestedData', nestedTablesData)
 
     return ({ roottabledata: rootTableData, nestedtablesdata: nestedTablesData })
@@ -120,7 +146,7 @@ const createTableData = (invarr) => {
 //const test1 = (t) => { console.log("FFF", t); return t }
 
 //async function getCompany(id, t) {
-export const getCompany = (id, t) => {
+export const getCompany = (id, rec) => {
     let tkn = BX24.getAuth();
     let addr = 'https://its74.bitrix24.ru/rest/crm.company.get.json';
     let req = `${addr}?auth=${tkn.access_token}&id=${id}`;
@@ -129,11 +155,10 @@ export const getCompany = (id, t) => {
     // return await f(r.data.result.TITLE)
     return axios.get(req)
         .then(response => {
-            console.log("Comp", response.data.result.TITLE)
             //return 'response.result - ' + id
-            t[id] =  response.data.result.TITLE
+            rec['COMPANY_NAME'] = response.data.result.TITLE
+            console.log('REC- companyName', rec)
             //return response.data.result.TITLE;
-
         }
         ).catch(err => {
             console.log("COMPANY-ERR", err)
