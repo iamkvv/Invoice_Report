@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Tabs, DatePicker, BackTop, Table, Icon, Tooltip as ATooltip } from 'antd';
+import { Tabs, Card, DatePicker, BackTop, Table, Icon, Tooltip as ATooltip } from 'antd';
 import moment from 'moment'
 
 import { getInvoicesByPeriod, buildTablesData } from '../BXMethods'
@@ -37,12 +37,14 @@ class InvoiceReport extends Component {
     detailInvoiceTable = (key) => {
         const nestedData = this.state.nestedtablesdata.filter((obj) => (obj.key === key));
         return (
-            <Table
-                columns={nestedTablesColumns}
-                dataSource={nestedData}
-                size="small"
-                pagination={true}
-            />
+            <Card title="Детализация" size="small">
+                <Table
+                    columns={nestedTablesColumns}
+                    dataSource={nestedData}
+                    size="small"
+                    pagination={true}
+                />
+            </Card>
         )
     }
 
@@ -81,6 +83,12 @@ class InvoiceReport extends Component {
                     nestedtablesdata: response.nestedtablesdata,
                     tableDataReady: true
                 })
+
+                let el = document.getElementById('react-app')
+                let w = el.scrollWidth;
+                let h = el.scrollHeight;
+                resizeWindow(w, h);//1500);  //перепроверить 
+
             })
     }
 

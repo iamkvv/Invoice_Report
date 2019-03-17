@@ -150,9 +150,9 @@ const createTablesData = (compArr, invArr) => {
             key: key_period,
             period: key_period,
 
-            payed: opl,
-            nopayed: nopl,
-            deltasum: opl - nopl,
+            payed: opl + " ₽",
+            nopayed: nopl + " ₽",
+            deltasum: (opl - nopl) + " ₽",
             invcount: groupedInvoices[prop].length
         }))
     }

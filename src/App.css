@@ -3,7 +3,7 @@
   margin: 0 auto;
   /* height: 100%; */
   height: auto;
-  min-height: 1000px;
+  /* min-height: 1000px; */
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -27,7 +27,7 @@ th.root-col-title {
   color: #545c6a !important;
 }
 
-.ant-tooltip-inner{
+.ant-tooltip-inner {
   background-color: #1890ff;
 }
 

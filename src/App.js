@@ -37,14 +37,11 @@ class App extends Component {
     let r = document.getElementById('invrep')
     this.simulateClick(r);
 
-    var obj = BX24.getAuth(); //поместить в context
-    console.log("access_token", obj.access_token);
 
-
-    let el = document.getElementById('react-app')
-    let w = el.scrollWidth;
-    let h = el.scrollHeight;
-    resizeWindow(w, h);//1500);  //перепроверить 
+    // let el = document.getElementById('react-app')
+    // let w = el.scrollWidth;
+    // let h = el.scrollHeight;
+    // resizeWindow(w, h);//1500);  //перепроверить 
   }
 
   render() {

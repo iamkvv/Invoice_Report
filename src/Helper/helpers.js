@@ -6,10 +6,10 @@ import sumBy from 'lodash/sumBy'
 //столбцы для корневой таблицы  счетов
 export const rootTableColumns = [
     { title: 'Период', dataIndex: 'period', key: 'period', className: 'root-col-title' },
-    { title: 'Оплачено ₽', dataIndex: "payed", key: "payed", className: 'root-col-title' },
-    { title: 'Не оплачено ₽', dataIndex: "nopayed", key: "nopayed", className: 'root-col-title' },
-    { title: 'Оплачено - не оплачено ₽', dataIndex: "deltasum", key: "не оплачено ₽", className: 'root-col-title' },
-    { title: 'Всего счетов', dataIndex: "invcount", key: "invcount", className: 'root-col-title' }
+    { title: 'Оплачено', dataIndex: "payed", key: "payed", className: 'root-col-title' },
+    { title: 'Не оплачено', dataIndex: "nopayed", key: "nopayed", className: 'root-col-title' },
+    { title: 'Дельта', dataIndex: "deltasum", key: "не оплачено ₽", className: 'root-col-title' },
+    { title: 'Кол-во', dataIndex: "invcount", key: "invcount", className: 'root-col-title' }
 ]
 
 //столбцы для вложенных таблиц счетов
@@ -70,10 +70,10 @@ export const nestedTablesColumns = [
         },
     },
     {
-        title: "Дата оплаты", dataIndex: "DATE_PAYED", key: "DATE_PAYED"
+        title: "Оплата", dataIndex: "DATE_PAYED", key: "DATE_PAYED"
     },
     {
-        title: "Длит-ть дн.", dataIndex: "DATE_DIFF", key: "DATE_DIFF"
+        title: "Срок", dataIndex: "DATE_DIFF", key: "DATE_DIFF"
     }
 ]
 
