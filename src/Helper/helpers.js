@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { Tooltip as ATooltip } from 'antd';
 import moment from 'moment'
-import { getCompany } from '../BXMethods'
+import sumBy from 'lodash/sumBy'
 
 //столбцы для корневой таблицы  счетов
 export const rootTableColumns = [
@@ -12,10 +12,8 @@ export const rootTableColumns = [
     { title: 'Всего счетов', dataIndex: "invcount", key: "invcount", className: 'root-col-title' }
 ]
 
-
-let test = {}
 //столбцы для вложенных таблиц счетов
-export const invoiceTablesColumns = [
+export const nestedTablesColumns = [
     {
         title: "ID", dataIndex: "ID",
         render: text => (
@@ -35,8 +33,7 @@ export const invoiceTablesColumns = [
         title: "Сумма", dataIndex: "PRICE", key: "PRICE"
     },
     {
-        title: "Компания", dataIndex: "COMPANY",
-        render: (id) => { getCompany(id, test); return test[id] }
+        title: "Компания", dataIndex: "COMPANY", key: "COMPANY"
     },
 
     {
@@ -47,9 +44,26 @@ export const invoiceTablesColumns = [
         filters: [{
             text: 'отклонен',
             value: 'D',
-        }, {
+        },
+        {
             text: 'оплачен',
             value: 'P',
+        },
+        {
+            text: 'подтвержден',
+            value: 'A',
+        },
+        {
+            text: 'частично',
+            value: 'Q',
+        },
+        {
+            text: 'отправлен',
+            value: 'S',
+        },
+        {
+            text: 'черновик',
+            value: 'N',
         }],
         onFilter: (value, record) => {
             return record.STATUS === value
@@ -62,9 +76,6 @@ export const invoiceTablesColumns = [
         title: "Длит-ть дн.", dataIndex: "DATE_DIFF", key: "DATE_DIFF"
     }
 ]
-
-
-
 
 /**
  * Возвращает римское значение месяца
@@ -114,9 +125,7 @@ export const monthRome = (mnum) => {
 }
 
 export const dateDiff = (dateBill, datePayed) => (
-    //   let res = ''
     datePayed ? moment(datePayed).diff(moment(dateBill), 'days') : ''
-    //   return res;
 )
 
 export const dateRU = (d) => {
@@ -127,6 +136,33 @@ export const dateRU = (d) => {
     }
     return d ? new Date(d).toLocaleString("ru", dateOptions) : ''
 }
+
+/**
+ * ищет компанию и возвращает ее TITLE
+ * @param {*} compArr 
+ * @param {*} compID 
+ */
+export const getCompanyTitle = (compArr, compID) => {
+    let comp = compArr.filter((cmp) => cmp.ID === compID)
+    if (comp.length === 1)
+        return comp[0].TITLE
+    else
+        return "?"
+}
+
+/**
+ * возвращает сумму оплаченных или неоплаченных счетов
+ * @param {*} data 
+ * @param {*} status 
+ */
+export const sumInvoicesByStatus = (data, status) => {
+    let sum = sumBy(data, (obj) => {
+        if (obj.PAYED === status)
+            return parseFloat(obj.PRICE)
+    })
+    return isNaN(sum) ? 0 : sum;
+}
+
 
 export const invoiceStatus = (s) => {
     switch (s) {

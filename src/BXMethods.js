@@ -5,8 +5,7 @@ import groupBy from 'lodash/groupBy'
 import sumBy from 'lodash/sumBy'
 //import filter from 'lodash/filter'
 
-import { monthRome, dateRU, dateDiff } from './Helper/helpers'
-import { object } from 'prop-types';
+import { monthRome, dateRU, dateDiff, getCompanyTitle, sumInvoicesByStatus } from './Helper/helpers'
 
 export const resizeWindow = (w, h) => {
     BX24.resizeWindow(w, h,
@@ -18,19 +17,16 @@ export const resizeWindow = (w, h) => {
 let arr = []; // массив для возврата полученных счетов
 let companiesArr = [];
 
-export const clearArray = () => {
-    console.log('ITS OLD ARRAY!!! ', arr) //переделать!!!
+export const clearInvArray = () => {
     arr.length = 0;
+}
+
+export const clearCompArray = () => {
     companiesArr.length = 0;
 }
 
-/**
- * рабочий запрос по компаниям
- *https://its74.bitrix24.ru/rest/crm.company.list.json?auth=5aff855c00376534000046e100000162201c03f4f3258ec292845af72cbdb76d6075ad
- *&filter[<ID]=120&filter[>ID]=100
- *&SELECT[]=TITLE&SELECT[]=PHONE&SELECT[]=BANKING_DETAILS
- *
- */
+
+
 
 /**
  * Возвращает счета по диапазону дат
@@ -38,30 +34,24 @@ export const clearArray = () => {
  * @param {*} startdate 
  * @param {*} enddate 
  */
-export const getInvoicesByPeriod = (startpos, startdate, enddate) => {
-    let tkn = BX24.getAuth(); //вынести из функции
+export const getInvoicesByPeriod = (startpos, startdate, enddate, token) => {
+    //let tkn = BX24.getAuth(); //вынести из функции
     let addr = 'https://its74.bitrix24.ru/rest/crm.invoice.list.json'
-    let req = `${addr}?auth=${tkn.access_token}${startpos ? '&start=' + startpos : ''}&FILTER[>DATE_BILL]=${startdate}&FILTER[<DATE_BILL]=${enddate}&timestamp=${new Date().getTime()}`
+    let req = `${addr}?auth=${token}${startpos ? '&start=' + startpos : ''}&FILTER[>DATE_BILL]=${startdate}&FILTER[<DATE_BILL]=${enddate}&timestamp=${new Date().getTime()}`
 
     return axios.get(req)
         .then(response => {
             if (response.data.next) {
                 arr = arr.concat(response.data.result)
-                return getInvoicesByPeriod(response.data.next, startdate, enddate)
+                return getInvoicesByPeriod(response.data.next, startdate, enddate, token)
             } else {
                 arr = arr.concat(response.data.result)
 
-                // setTimeout(() => { //ставим имена фирм
-                //     CompName(0, arr)
-                // }, 0);
-
-                //return arr
                 let datas = Object.assign({}, {
                     graphicData: createGraphicData(arr),
-                    tableData: createTableData(arr)
+                    sourceData: arr// возвращаем исходные данные по счетам, чтобы потом создать данные для таблиц   createTableData(arr)
                 })
-                //return createGraphicData(arr) //не забыть про arr!! УБРАТЬ!!
-                console.log('datas??', datas)
+                //не забыть про arr!! УБРАТЬ!!
                 return datas
             }
         })
@@ -71,31 +61,81 @@ export const getInvoicesByPeriod = (startpos, startdate, enddate) => {
 }
 
 
-function CompName(idx, arr) {
-    let cnt = 0;
-    for (var i = idx; cnt < 90; i++) {
-        cnt++;
-        if (i == arr.length) return
-        console.log('from COMP_NAME', arr[i]['COMPANY'])
-        getCompany(arr[i]['COMPANY'], arr[i])
-    }
+/**
+ * Возвращает все компании
+ * @param {*} token 
+ * @param {*} startpos 
+ */
+const getAllCompanies = (token, startpos) => {
+    let addr = 'https://its74.bitrix24.ru/rest/crm.company.list.json';
+    let req = `${addr}?auth=${token}${startpos ? '&start=' + startpos : ''}&SELECT[]=ID&SELECT[]=TITLE`;
 
-    setTimeout(() => {
-        console.log('-----------')
-        CompName(i, arr)
-    }, 3000);
+    return axios.get(req)
+        .then(response => {
+            if (response.data.next) {
+                companiesArr = companiesArr.concat(response.data.result)
+                return getAllCompanies(token, response.data.next)
+            } else {
+                companiesArr = companiesArr.concat(response.data.result)
+                return companiesArr
+            }
+        })
+        .catch(err => {
+            console.log(err)
+        })
 }
 
+/**
+ * строит данные для графика
+ * @param {*} invarr 
+ */
+const createGraphicData = (invarr) => {
+    let graphicData = [];
 
+    let groupedInvoices = groupBy(invarr, function (inv) {
+        return moment(inv['DATE_BILL'], 'YYYY-MM-DD').startOf('month');
+    });
+
+    for (let prop in groupedInvoices) {
+        graphicData.push(Object.assign({}, {
+            period: new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth()),
+            //есть: filter(groupedInvoices[prop], { PAYED: 'Y' }).length,
+            // нет: filter(groupedInvoices[prop], { PAYED: 'N' }).length,
+
+            "оплачено ₽": sumBy(groupedInvoices[prop], (obj) => {
+                if (obj.PAYED === "Y")
+                    return parseFloat(obj.PRICE)
+            }),
+
+            "не оплачено ₽": sumBy(groupedInvoices[prop], (obj) => {
+                if (obj.PAYED === "N")
+                    return parseFloat(obj.PRICE)
+            })
+        }))
+    }
+    return graphicData
+}
 
 /**
- * создает данные для родительской таблицы
+ * строит данные для родительской и вложенных таблиц
+ * @param {*} token 
+ * @param {*} invoices 
  */
-const createTableData = (invarr) => {
+export const buildTablesData = (token, invoices) => {
+    return getAllCompanies(token, null)
+        .then(response => {
+            return createTablesData(response, invoices)  //вернем объект с данными для всех таблиц
+        })
+}
+
+/**
+ * создает данные для родительской таблицы и вложенных таблиц
+ */
+const createTablesData = (compArr, invArr) => {
     let rootTableData = [];
     let nestedTablesData = [];
 
-    let groupedInvoices = groupBy(invarr, function (inv) {
+    let groupedInvoices = groupBy(invArr, function (inv) {
         return moment(inv['DATE_BILL'], 'YYYY-MM-DD').startOf('month');
     });
 
@@ -116,6 +156,7 @@ const createTableData = (invarr) => {
             invcount: groupedInvoices[prop].length
         }))
     }
+
     ////строим массив для вложенных таблиц, где каждый счет будет помечен признаком периода
     for (let prop in groupedInvoices) {
         for (let i = 0; i < groupedInvoices[prop].length; i++) {
@@ -124,124 +165,36 @@ const createTableData = (invarr) => {
                     key: new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth()),
                     ID: groupedInvoices[prop][i].ID,
                     ACCOUNT_NUMBER: groupedInvoices[prop][i].ACCOUNT_NUMBER,
-                    DATE_BILL: dateRU(groupedInvoices[prop][i].DATE_BILL),//  new Date(data[i].DATE_BILL).toLocaleString("ru", dataOptions),
+                    DATE_BILL: dateRU(groupedInvoices[prop][i].DATE_BILL),
                     PRICE: groupedInvoices[prop][i].PRICE,
-                    COMPANY: groupedInvoices[prop][i].UF_COMPANY_ID,
-                    COMPANY_NAME: "",
+                    COMPANY: getCompanyTitle(compArr, groupedInvoices[prop][i].UF_COMPANY_ID),
                     STATUS: groupedInvoices[prop][i].STATUS_ID,
-                    DATE_PAYED: dateRU(groupedInvoices[prop][i].DATE_PAYED), // data[i].DATE_PAYED ? new Date(data[i].DATE_PAYED).toLocaleString("ru", dataOptions) : '',
-                    DATE_DIFF: dateDiff(groupedInvoices[prop][i].DATE_BILL, groupedInvoices[prop][i].DATE_PAYED) //     data[i].DATE_PAYED ? moment(data[i].DATE_PAYED).diff(moment(data[i].DATE_BILL), 'days') : ''
+                    DATE_PAYED: dateRU(groupedInvoices[prop][i].DATE_PAYED),
+                    DATE_DIFF: dateDiff(groupedInvoices[prop][i].DATE_BILL, groupedInvoices[prop][i].DATE_PAYED)
                 })
             )
         }
     }
 
-
-
-    //CompName(0, nestedTablesData)
-    console.log('nestedData', nestedTablesData)
-
     return ({ roottabledata: rootTableData, nestedtablesdata: nestedTablesData })
 }
-//const test1 = (t) => { console.log("FFF", t); return t }
-
-//async function getCompany(id, t) {
-export const getCompany = (id, rec) => {
-    let tkn = BX24.getAuth();
-    let addr = 'https://its74.bitrix24.ru/rest/crm.company.get.json';
-    let req = `${addr}?auth=${tkn.access_token}&id=${id}`;
-    //let r = await axios.get(req)
-    // t[id] = await r.data.result.TITLE
-    // return await f(r.data.result.TITLE)
-    return axios.get(req)
-        .then(response => {
-            //return 'response.result - ' + id
-            rec['COMPANY_NAME'] = response.data.result.TITLE
-            console.log('REC- companyName', rec)
-            //return response.data.result.TITLE;
-        }
-        ).catch(err => {
-            console.log("COMPANY-ERR", err)
-        })
-}
-
-//export { getCompany }
-
-const getCompanyTitle = (idcomp) => {
-    // let t = this.state.companies.filter((cmp) => cmp.ID === idcomp)
-    // if (t.length === 1) {
-    //     return t[0].TITLE
-    // } else {
-    //     return
-    // }
-}
-
-const sumInvoicesByStatus = (data, status) => {
-    //let sum = 0
-    let sum = sumBy(data, (obj) => {
-        if (obj.PAYED === status)
-            return parseFloat(obj.PRICE)
-    })
-    return isNaN(sum) ? 0 : sum;
-}
-
-/**
- * создает данные для графика
- * @param {*} invarr 
- */
-const createGraphicData = (invarr) => {
-    let graphicData = [];
-
-    let groupedInvoices = groupBy(invarr, function (inv) {
-        return moment(inv['DATE_BILL'], 'YYYY-MM-DD').startOf('month');
-    });
-
-    for (let prop in groupedInvoices) {
-        // console.log(new Date(prop).getFullYear() + " " + new Date(prop).getMonth(), groupedInvoices[prop]);
-
-        graphicData.push(Object.assign({}, {
-            period: new Date(prop).getFullYear() + " " + monthRome(new Date(prop).getMonth()),
-            //есть: filter(groupedInvoices[prop], { PAYED: 'Y' }).length,
-            // нет: filter(groupedInvoices[prop], { PAYED: 'N' }).length,
-
-            "оплачено ₽": sumBy(groupedInvoices[prop], (obj) => {
-                if (obj.PAYED === "Y")
-                    return parseFloat(obj.PRICE)
-            }),
-
-            "не оплачено ₽": sumBy(groupedInvoices[prop], (obj) => {
-                if (obj.PAYED === "N")
-                    return parseFloat(obj.PRICE)
-            })
-        }))
-    }
-    return graphicData
-}
 
 
-/**
- * Возвращает все компании
- * @param {*} token 
- * @param {*} startpos 
- */
-export const getAllCompanies = (token, startpos) => {
-    let addr = 'https://its74.bitrix24.ru/rest/crm.company.list.json';
-    let req = `${addr}?auth=${token}${startpos ? '&start=' + startpos : ''}&SELECT[]=ID&SELECT[]=TITLE`;
+// export const getCompany = (id, rec) => {
+//     let tkn = BX24.getAuth();
+//     let addr = 'https://its74.bitrix24.ru/rest/crm.company.get.json';
+//     let req = `${addr}?auth=${tkn.access_token}&id=${id}`;
 
-    return axios.get(req)
-        .then(response => {
-            if (response.data.next) {
-                companiesArr = companiesArr.concat(response.data.result)
-                return getAllCompanies(token, response.data.next)
-            } else {
-                companiesArr = companiesArr.concat(response.data.result)
-                return companiesArr
-            }
-        })
-        .catch(err => {
-            console.log(err)
-        })
-}
+//     return axios.get(req)
+//         .then(response => {
+//             rec['COMPANY_NAME'] = response.data.result.TITLE
+//             //return response.data.result.TITLE;
+//         }
+//         ).catch(err => {
+//             console.log("COMPANY-ERR", err)
+//         })
+// }
+
 
 export const sendToLenta = (mess) => {
     let tkn = BX24.getAuth();
@@ -281,43 +234,6 @@ export const getCurrentUser = () => {
         return null
     }
 }
-
-export const getUsers = (userArr, returnResult) => {
-    if (window.BX24) {
-        window.BX24.callMethod(
-            'user.get',
-            {
-                "filter": { "ACTIVE": true },
-                "select": ["ID", "NAME", "LAST_NAME", "UF_DEPARTMENT"]
-            },
-
-            function (result) {
-                if (result.error()) {
-                    console.error('get users', result.error());
-                }
-                else {
-
-                    Array.prototype.push.apply(userArr, result.data());
-
-                    if (result.more()) {
-                        result.next();
-                    } else {
-                        console.log("userArr end", userArr)
-                        let tmpArr = userArr.filter((user) => { return (user.WORK_POSITION !== "" && user.WORK_POSITION !== null) })
-                        console.log("userArr filter", tmpArr)
-                        //OK!!
-                        returnResult(tmpArr); //возвращает в компонент массив польз-й и запускает функцию получения подразделений
-                    }
-                }
-            }
-        )
-        //}
-        //)
-    } else {
-        return null
-    }
-}
-
 
 export const getUserDepart = (id) => {
     BX24.callBatch({
