@@ -3,7 +3,7 @@ import React, { Component } from 'react'
 import { LocaleProvider } from 'antd';
 import ruRU from 'antd/lib/locale-provider/ru_RU';
 
-import { resizeWindow } from './BXMethods'
+//import { resizeWindow } from './BXMethods'
 
 import { Layout } from 'antd';
 import CurrMessage from './components/message'
@@ -12,7 +12,6 @@ import InvoiceReport from './components/invReport'
 import { BrowserRouter as Router, Route, Link } from "react-router-dom";
 
 /**
- * http://recharts.org/en-US/examples/StackedBarChart
  * zip_dist.js в .bin
  * //https://github.com/Mostafa-Samir/zip-local;
 var zipper = require('zip-local');
@@ -28,7 +27,6 @@ class App extends Component {
       cancelable: true,
       view: window
     });
-    // elem.dispatchEvent(evt)
     // If cancelled, don't dispatch our event
     var canceled = !elem.dispatchEvent(evt);
   };
@@ -36,7 +34,6 @@ class App extends Component {
   componentDidMount() {
     let r = document.getElementById('invrep')
     this.simulateClick(r);
-
 
     // let el = document.getElementById('react-app')
     // let w = el.scrollWidth;
